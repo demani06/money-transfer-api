@@ -20,9 +20,10 @@ Design and implement a RESTful API (including data model and the backing impleme
  
  ##  API endpoints
  
- + Funds transfer endpoint 
-    sample request : http://localhost:6090/api/transactions
-    Request Type : POST
+ ### Funds transfer endpoint 
+   + Endpoint : http://localhost:6090/api/transactions
+   + Request Type : POST
+   + sample request : 
 ```javascript
   {
        {

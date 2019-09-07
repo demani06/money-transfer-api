@@ -3,6 +3,7 @@ package com.deepak.api.moneytransfer;
 
 import com.deepak.api.moneytransfer.model.MoneyTransaction;
 import com.deepak.api.moneytransfer.model.TransactionRequestDTO;
+import com.deepak.api.moneytransfer.utils.AppConstants;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
@@ -16,6 +17,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/*
+* This is the main class which boots the Vertx server and exposes the endpoints
+* */
 @Slf4j
 public class MoneyTransferVerticle extends AbstractVerticle {
 
@@ -31,10 +35,12 @@ public class MoneyTransferVerticle extends AbstractVerticle {
         Router router = Router.router(vertx);
 
         router.route().handler(BodyHandler.create());
+        //Endpoint for post a funds transfer
         router.post("/api/transactions").handler(this::handleTransferMoney);
+        //Endpoint to view the transactions log
         router.get("/api/transactions").handler(this::handleGetTransactions);
-
-        vertx.createHttpServer().requestHandler(router::accept).listen(8080);
+        //Start the server on port 6090
+        vertx.createHttpServer().requestHandler(router::accept).listen(AppConstants.SERVER_PORT);
     }
 
     private void setUpInitialData() {

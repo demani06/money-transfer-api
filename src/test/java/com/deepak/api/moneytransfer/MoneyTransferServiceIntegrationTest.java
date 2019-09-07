@@ -2,13 +2,15 @@ package com.deepak.api.moneytransfer;
 
 import com.deepak.api.moneytransfer.model.Account;
 import com.deepak.api.moneytransfer.model.TransactionRequestDTO;
-import com.jayway.restassured.RestAssured;
+import com.deepak.api.moneytransfer.utils.AppConstants;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.math.BigDecimal;
@@ -17,17 +19,6 @@ import java.math.BigDecimal;
 public class MoneyTransferServiceIntegrationTest {
 
     private Vertx vertx;
-
-    @BeforeClass
-    public static void configureRestAssured() {
-        RestAssured.baseURI = "http://localhost";
-        RestAssured.port = Integer.getInteger("http.port", 8080);
-    }
-
-    @AfterClass
-    public static void unconfigureRestAssured() {
-        RestAssured.reset();
-    }
 
     @Before
     public void setup(TestContext testContext) {
@@ -44,23 +35,23 @@ public class MoneyTransferServiceIntegrationTest {
     public void given_when_Money_Transfer_thenSuccess(TestContext testContext) {
         final Async async = testContext.async();
 
-        Account account1 = new Account(12222999L, 060606L,new BigDecimal(1500));
-        Account account2 = new Account(22222999L, 060606L,new BigDecimal(500));
+        Account account1 = new Account(12222999L, 060606L, new BigDecimal(1500));
+        Account account2 = new Account(22222999L, 060606L, new BigDecimal(500));
 
         //Request json
-        final String json = Json.encodePrettily(new TransactionRequestDTO(1, account1, account2, new BigDecimal(200)));
+        final String json = Json.encodePrettily(new TransactionRequestDTO(account1, account2, new BigDecimal(200)));
 
         final String length = Integer.toString(json.length());
 
         vertx.createHttpClient()
-                .post(8080, "localhost", "/api/transactions")
+                .post(AppConstants.SERVER_PORT, "localhost", "/api/transactions")
                 .putHeader("content-type", "application/json")
                 .putHeader("content-length", length)
                 .handler(response -> {
                     testContext.assertEquals(response.statusCode(), 201);
                     testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
                     response.bodyHandler(body -> {
-                        System.out.println("body="+body);
+                        System.out.println("body=" + body);
                         //TODO call the get accounts to see the refreshed balance and assert the balances of both accounts
                         async.complete();
                     });
@@ -79,13 +70,13 @@ public class MoneyTransferServiceIntegrationTest {
         //then
 
         vertx.createHttpClient()
-                .get(8080, "localhost", "/api/transactions")
+                .get(AppConstants.SERVER_PORT, "localhost", "/api/transactions")
                 .putHeader("content-type", "application/json")
                 .handler(response -> {
                     testContext.assertEquals(response.statusCode(), 200);
                     testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
                     response.bodyHandler(body -> {
-                        System.out.println("body="+body);
+                        System.out.println("body=" + body);
                         //TODO call the get accounts to see the refreshed balance and assert the balances of both accounts
                         async.complete();
                     });

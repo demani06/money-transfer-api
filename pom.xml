@@ -74,7 +74,7 @@
                                 </transformer>
                             </transformers>
                             <artifactSet/>
-                            <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-app.jar
+                            <outputFile>${project.build.directory}/${project.artifactId}-fat-executable.jar
                             </outputFile>
                         </configuration>
                     </execution>

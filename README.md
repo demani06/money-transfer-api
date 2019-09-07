@@ -14,16 +14,16 @@ Design and implement a RESTful API (including data model and the backing impleme
 
 ##  Build and Run
 
- To build the jar file - ### mvn clean install
+ To build the jar file - `mvn clean install`
 
- To run the application as a standalone app - ### java -jar ".\target\money-transfer-api-1.0-SNAPSHOT.jar"
+ To run the application as a standalone app -  `java -jar ".\target\money-transfer-api-1.0-SNAPSHOT.jar" `
  
  ##  API endpoints
  
  + Funds transfer endpoint 
     sample request : http://localhost:6090/api/transactions
     Request Type : POST
-
+```javascript
   {
        {
         "accountNumber": 90909090,
@@ -37,7 +37,7 @@ Design and implement a RESTful API (including data model and the backing impleme
        },
 	    transferAmount: 900
   }
-
+```
  
  
  ## Caveats

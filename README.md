@@ -16,7 +16,7 @@ Design and implement a RESTful API (including data model and the backing impleme
 
  To build the jar file - `mvn clean install`
 
- To run the application as a standalone app -  `java -jar ".\target\money-transfer-api-1.0-SNAPSHOT.jar" `
+ To run the application as a standalone app -  `java -jar target/money-transfer-api-fat-executable.jar `
  
  ##  API endpoints
  

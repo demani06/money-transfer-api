@@ -37,8 +37,8 @@ public class MoneyTransferServiceIntegrationTest {
     public void given_when_Money_Transfer_thenSuccess(TestContext testContext) {
         final Async async = testContext.async();
 
-        Account account1 = new Account(12222999L, 060606L, new BigDecimal(1500));
-        Account account2 = new Account(22222999L, 060606L, new BigDecimal(500));
+        Account account1 = new Account(12222999L, 606060L);
+        Account account2 = new Account(22222999L, 606060L);
 
         //Request json
         final String json = Json.encodePrettily(new TransactionRequestDTO(account1, account2, new BigDecimal(200)));
@@ -55,6 +55,34 @@ public class MoneyTransferServiceIntegrationTest {
                     response.bodyHandler(body -> {
                         System.out.println("body=" + body);
                         //TODO call the get accounts to see the refreshed balance and assert the balances of both accounts
+                        async.complete();
+                    });
+                })
+                .write(json)
+                .end();
+    }
+
+    @Test
+    public void given_when_Money_Transfer_money_equals_balance_thenSuccess(TestContext testContext) {
+        final Async async = testContext.async();
+
+        Account account1 = new Account(12222999L, 606060L);
+        Account account2 = new Account(22222999L, 606060L);
+
+        //Request json
+        final String json = Json.encodePrettily(new TransactionRequestDTO(account1, account2, new BigDecimal(800)));// account number has exactly 800
+
+        final String length = Integer.toString(json.length());
+
+        vertx.createHttpClient()
+                .post(AppConstants.SERVER_PORT, "localhost", "/api/transactions")
+                .putHeader("content-type", "application/json")
+                .putHeader("content-length", length)
+                .handler(response -> {
+                    testContext.assertEquals(response.statusCode(), 201);
+                    testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
+                    response.bodyHandler(body -> {
+                        System.out.println("body=" + body);
                         async.complete();
                     });
                 })

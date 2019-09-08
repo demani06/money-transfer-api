@@ -4,23 +4,34 @@ import com.deepak.api.moneytransfer.model.Account;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Slf4j
 public class AccountValidator {
 
-    public static boolean doesAccountHaveEnoughFunds(Account accountToBeChecked, BigDecimal amount) {
+    public static boolean doesAccountHaveEnoughFunds(Account accountToBeChecked, BigDecimal amount, Map<Long, Account> accountsMap) {
         log.info("Validating the source account for Zero and enough balance, accountToBeChecked = {} and amount = {}", accountToBeChecked, amount);
-        log.info("accountToBeChecked.getBalance().longValue() = {}", accountToBeChecked.getBalance().longValue());
-        log.info("amount.longValue = {}", amount.longValue());
+
+        Account debitAccount = accountsMap.get(accountToBeChecked.getAccountNumber());
 
         boolean doesAccountHaveEnoughFunds = false;
 
-        if(accountToBeChecked.getBalance().compareTo(new BigDecimal(0)) > 0 && accountToBeChecked.getBalance().compareTo(amount) > 0){
-            log.info("amount.longValue = {}", amount.longValue());
+        if (debitAccount.getBalance().compareTo(new BigDecimal(0)) > 0 && debitAccount.getBalance().compareTo(amount) >= 0) {
             doesAccountHaveEnoughFunds = true;
         }
 
-        return doesAccountHaveEnoughFunds;
+        log.info("Account validation for funds check completed and result = {}", doesAccountHaveEnoughFunds);
 
+        return doesAccountHaveEnoughFunds;
+    }
+
+    public static boolean isAccountValid(Account sourceAccount, Map<Long, Account> accountsMap) {
+        boolean isAccountValid = false;
+
+        if(accountsMap.containsKey(sourceAccount.getAccountNumber())){
+            isAccountValid = true;
+        }
+
+        return isAccountValid;
     }
 }

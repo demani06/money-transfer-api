@@ -15,4 +15,9 @@ public class Account {
     private Long accountNumber;
     private Long sortCode;
     private BigDecimal balance;
+
+    public Account(Long accountNumber, Long sortCode) {
+        this.accountNumber = accountNumber;
+        this.sortCode = sortCode;
+    }
 }

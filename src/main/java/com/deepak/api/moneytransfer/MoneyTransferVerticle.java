@@ -1,8 +1,11 @@
 package com.deepak.api.moneytransfer;
 
 
+import com.deepak.api.moneytransfer.exception.InsufficientFundsException;
+import com.deepak.api.moneytransfer.model.ErrorMessageResponse;
 import com.deepak.api.moneytransfer.model.MoneyTransaction;
 import com.deepak.api.moneytransfer.model.TransactionRequestDTO;
+import com.deepak.api.moneytransfer.utils.AccountValidator;
 import com.deepak.api.moneytransfer.utils.AppConstants;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpServerResponse;
@@ -13,23 +16,26 @@ import io.vertx.ext.web.handler.BodyHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /*
-* This is the main class which boots the Vertx server and exposes the endpoints
-* */
+ * This is the main class which boots the Vertx server and exposes the endpoints
+ * */
 @Slf4j
 public class MoneyTransferVerticle extends AbstractVerticle {
 
-    private Map<UUID, MoneyTransaction> transactionsMap = new HashMap<>();
+    //TODO move this map to a repository or service class
+    private Map<UUID, MoneyTransaction> transactionsMap = new ConcurrentHashMap<>();
 
 
     @Override
     public void start() {
 
-        //TODO for api
+        //TODO minimum set up of default accounts, transactions and customer
         setUpInitialData();
 
         Router router = Router.router(vertx);
@@ -44,7 +50,6 @@ public class MoneyTransferVerticle extends AbstractVerticle {
     }
 
     private void setUpInitialData() {
-
         //Basic test data for API
         MoneyTransaction sampleTransaction = new MoneyTransaction(90909090L, 99999999L, new BigDecimal(43000));
         transactionsMap.put(sampleTransaction.getTransactionId(), sampleTransaction);
@@ -66,30 +71,54 @@ public class MoneyTransferVerticle extends AbstractVerticle {
         try {
             final TransactionRequestDTO transactionRequestDTO = Json.decodeValue(routingContext.getBodyAsString(), TransactionRequestDTO.class);
 
-            log.debug("transactionRequestDTO=",  transactionRequestDTO);
+            log.debug("transactionRequestDTO=", transactionRequestDTO);
 
-            //TODO validation check on debit source account if amount be to be debited > balance amount of debit account
             //TODO validation check for null
-            debitSourceAccount(transactionRequestDTO);
-            creditDestinationAccount(transactionRequestDTO);
+            //TODO validation check on debit source account if amount be to be debited > balance amount of debit account
+            if (!AccountValidator.doesAccountHaveEnoughFunds(transactionRequestDTO.getSourceAccount(), transactionRequestDTO.getTransferAmount())) {
+                throw new InsufficientFundsException("Not enough funds to transfer");
+            }
 
-            //TODO refresh account balances in store
+            MoneyTransaction moneyTransaction = null;
 
-            MoneyTransaction moneyTransaction = new MoneyTransaction(transactionRequestDTO.getSourceAccount().getAccountNumber(),
-                    transactionRequestDTO.getDestinationAccount().getAccountNumber(), transactionRequestDTO.getTransferAmount());
+            //Manual locking can be used instead of synchronized block but this is used for simplicity
+            //Optimistic locking is not prefered in this case but it might be a performance issue
+            synchronized (transactionRequestDTO) {
 
-            log.info("values after funds transfer =", transactionRequestDTO);
-            log.info("moneyTransaction values after funds transfer =", moneyTransaction.getTransactionId());
+                debitSourceAccount(transactionRequestDTO);
+                creditDestinationAccount(transactionRequestDTO);
 
-            transactionsMap.put(moneyTransaction.getTransactionId(), moneyTransaction);
+                //TODO refresh account balances in store
+
+                moneyTransaction = new MoneyTransaction(transactionRequestDTO.getSourceAccount().getAccountNumber(),
+                        transactionRequestDTO.getDestinationAccount().getAccountNumber(), transactionRequestDTO.getTransferAmount());
+
+                log.debug("values after funds transfer =", transactionRequestDTO);
+                log.debug("moneyTransaction values after funds transfer =", moneyTransaction.getTransactionId());
+
+                transactionsMap.put(moneyTransaction.getTransactionId(), moneyTransaction);
+            }
 
             //return moneytransaction object in case of 201 (successful creation)
             routingContext.response()
                     .setStatusCode(201)
                     .putHeader("content-type", "application/json; charset=utf-8")
                     .end(Json.encodePrettily(moneyTransaction));
+        } catch (InsufficientFundsException ise) {
+            ErrorMessageResponse errorMessage = new ErrorMessageResponse(400, ise.getMessage(), LocalDateTime.now());
+            log.error("Not enough funds to transfer, hence throwing user error response code");
+            routingContext.response()
+                    .putHeader("content-type", "application/json; charset=utf-8")
+                    .setStatusCode(400)
+                    .end(Json.encodePrettily(errorMessage));
         } catch (Exception e) {
-            routingContext.response().setStatusCode(400).end();
+            //Any other error apart from business exceptions would be a system error rather than an user error
+            ErrorMessageResponse errorMessage = new ErrorMessageResponse(500, e.getMessage(), LocalDateTime.now());
+            log.error("Generic server exception");
+            routingContext.response()
+                    .putHeader("content-type", "application/json; charset=utf-8")
+                    .setStatusCode(500)
+                    .end(Json.encodePrettily(errorMessage));
         }
     }
 

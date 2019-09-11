@@ -37,7 +37,7 @@ public class TransactionRepositoryInMemoryImpl implements TransactionRepository<
         return transactionsMap
                 .values()
                 .stream()
-                .filter(account -> account.getSourceAccountNumber().compareTo(accountNumber)==0)
+                .filter(account -> account.getSourceAccountNumber().compareTo(accountNumber)==0 || account.getDestinationAccountNumber().compareTo(accountNumber)==0)
                 .collect(Collectors.toSet());
     }
 

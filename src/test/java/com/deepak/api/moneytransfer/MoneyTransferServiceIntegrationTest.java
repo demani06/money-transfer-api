@@ -138,7 +138,24 @@ public class MoneyTransferServiceIntegrationTest {
                     testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
                     response.bodyHandler(body -> {
                         System.out.println("body=" + body);
-                        //TODO call the get accounts to see the refreshed balance and assert the balances of both accounts
+                        async.complete();
+                    });
+                })
+                .end();
+    }
+
+    @Test
+    public void given_when_call_get_Transactions_thenReturn_400_for_Invalid_accountNumber(TestContext testContext) {
+        final Async async = testContext.async();
+
+        vertx.createHttpClient()
+                .get(AppConstants.SERVER_PORT, "localhost", "/api/accounts/90909090a/transactions/")
+                .putHeader("content-type", "application/json")
+                .handler(response -> {
+                    testContext.assertEquals(response.statusCode(), 400);
+                    testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
+                    response.bodyHandler(body -> {
+                        testContext.assertTrue(body.toString().contains("Invalid Account number"));
                         async.complete();
                     });
                 })

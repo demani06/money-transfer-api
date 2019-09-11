@@ -1,5 +1,6 @@
-package com.deepak.api.moneytransfer.model;
+package com.deepak.api.moneytransfer.request;
 
+import com.deepak.api.moneytransfer.model.Account;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

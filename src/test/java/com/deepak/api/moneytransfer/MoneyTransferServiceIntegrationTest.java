@@ -1,7 +1,7 @@
 package com.deepak.api.moneytransfer;
 
 import com.deepak.api.moneytransfer.model.Account;
-import com.deepak.api.moneytransfer.model.TransactionRequestDTO;
+import com.deepak.api.moneytransfer.request.TransactionRequestDTO;
 import com.deepak.api.moneytransfer.utils.AppConstants;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
@@ -95,8 +95,8 @@ public class MoneyTransferServiceIntegrationTest {
     public void given_when_Money_Transfer_then_Failure_If_no_enough_funds(TestContext testContext) {
         final Async async = testContext.async();
 
-        Account account1 = new Account(12222999L, 060606L, new BigDecimal(1500));
-        Account account2 = new Account(22222999L, 060606L, new BigDecimal(500));
+        Account account1 = new Account(12222999L, 060606L, new BigDecimal(1500), null);
+        Account account2 = new Account(22222999L, 060606L, new BigDecimal(500), null);
 
         //Request json
         final String json = Json.encodePrettily(new TransactionRequestDTO(account1, account2, new BigDecimal(2200)));
@@ -131,7 +131,7 @@ public class MoneyTransferServiceIntegrationTest {
         //then
 
         vertx.createHttpClient()
-                .get(AppConstants.SERVER_PORT, "localhost", "/api/transactions")
+                .get(AppConstants.SERVER_PORT, "localhost", "/api/accounts/90909090/transactions/")
                 .putHeader("content-type", "application/json")
                 .handler(response -> {
                     testContext.assertEquals(response.statusCode(), 200);

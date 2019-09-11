@@ -2,7 +2,16 @@ package com.deepak.api.moneytransfer;
 
 
 import com.deepak.api.moneytransfer.exception.InsufficientFundsException;
-import com.deepak.api.moneytransfer.model.*;
+import com.deepak.api.moneytransfer.exception.InvalidAccountException;
+import com.deepak.api.moneytransfer.model.Account;
+import com.deepak.api.moneytransfer.model.Customer;
+import com.deepak.api.moneytransfer.model.MoneyTransaction;
+import com.deepak.api.moneytransfer.repository.AccountRepositoryInMemoryImpl;
+import com.deepak.api.moneytransfer.repository.AccountsRepository;
+import com.deepak.api.moneytransfer.repository.TransactionRepository;
+import com.deepak.api.moneytransfer.repository.TransactionRepositoryInMemoryImpl;
+import com.deepak.api.moneytransfer.request.TransactionRequestDTO;
+import com.deepak.api.moneytransfer.response.ErrorMessageResponse;
 import com.deepak.api.moneytransfer.utils.AccountValidator;
 import com.deepak.api.moneytransfer.utils.AppConstants;
 import io.vertx.core.AbstractVerticle;
@@ -15,9 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /*
  * This is the main class which boots the Vertx server and exposes the endpoints
@@ -25,16 +33,20 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class MoneyTransferVerticle extends AbstractVerticle {
 
+    /*
     //TODO move this map to a repository or service class
     private Map<UUID, MoneyTransaction> transactionsMap = new ConcurrentHashMap<>();
     //TODO move this map to a repository or service class
-    private Map<Long, Account> accountsMap = new ConcurrentHashMap<>();
+    private Map<Long, Account> accountsMap = new ConcurrentHashMap<>();*/
 
+    //private JDBCClient dbClient;
+
+    private final AccountsRepository<Account, Long> accountsRepository = new AccountRepositoryInMemoryImpl();
+    private final TransactionRepository<MoneyTransaction, UUID> transactionRepository = new TransactionRepositoryInMemoryImpl();
 
     @Override
     public void start() {
 
-        //TODO minimum set up of default accounts, transactions and customer
         setUpInitialData();
 
         Router router = Router.router(vertx);
@@ -43,38 +55,56 @@ public class MoneyTransferVerticle extends AbstractVerticle {
         //Endpoint for post a funds transfer
         router.post("/api/transactions").handler(this::handleTransferMoney);
         //Endpoint to view the transactions log
-        router.get("/api/transactions").handler(this::handleGetTransactions);
+        router.get("/api/accounts/:id/transactions/").handler(this::handleGetTransactionsByAccountId);
         //Endpoint to view the accounts
         router.get("/api/accounts").handler(this::handleGetAccounts); //TODO this needs to be transfered to either customer/accounts or accounts/<account_id>
+
+        /*//Endpoint to create the account
+        router.post("/api/accounts").handler(this::handleCreateAccounts);*/
+
         //Start the server on port 6090
-        vertx.createHttpServer().requestHandler(router::accept).listen(AppConstants.SERVER_PORT);
+        vertx.createHttpServer()
+                .requestHandler(router)
+                .listen(AppConstants.SERVER_PORT);
     }
 
 
     private void setUpInitialData() {
         //Basic test data for API
 
-        Account sampleAccount1 = new Account(90909090L,606060L, new BigDecimal(500));
-        Account sampleAccount2 = new Account(90909091L,606060L, new BigDecimal(400));
-        Account sampleAccount3 = new Account(12222999L,606060L, new BigDecimal(800));
-        Account sampleAccount4 = new Account(22222999L,606060L, new BigDecimal(900));
-        accountsMap.put(sampleAccount1.getAccountNumber(),sampleAccount1);
-        accountsMap.put(sampleAccount2.getAccountNumber(),sampleAccount2);
-        accountsMap.put(sampleAccount3.getAccountNumber(),sampleAccount3);
-        accountsMap.put(sampleAccount4.getAccountNumber(),sampleAccount4);
+        Customer customer1 = new Customer(UUID.randomUUID(), "Cunnan", "James", "cunnan.james@companya.com");
+        Customer customer2 = new Customer(UUID.randomUUID(), "Sam", "Fox", "sam.fox@companyb.com");
+
+        Account sampleAccount1 = new Account(90909090L, 606060L, new BigDecimal(500), customer1);
+        Account sampleAccount2 = new Account(90909091L, 606060L, new BigDecimal(400), customer2);
+        Account sampleAccount3 = new Account(12222999L, 606060L, new BigDecimal(800), customer1) ;
+        Account sampleAccount4 = new Account(22222999L, 606060L, new BigDecimal(900), customer1);
+
+        accountsRepository.save(sampleAccount1);
+        accountsRepository.save(sampleAccount2);
+        accountsRepository.save(sampleAccount3);
+        accountsRepository.save(sampleAccount4);
 
         //Transactions
         MoneyTransaction sampleTransaction = new MoneyTransaction(90909090L, 99999999L, new BigDecimal(100));
-        transactionsMap.put(sampleTransaction.getTransactionId(), sampleTransaction);
+        transactionRepository.save(sampleTransaction);
     }
 
-    private void handleGetTransactions(RoutingContext routingContext) {
-        log.info("Start handleGetTransactions");
+    private void handleGetTransactionsByAccountId(RoutingContext routingContext) {
 
-        routingContext.response()
+        String accountNum = routingContext.request()
+                .getParam("id");
+
+        log.info("Get transactions for account number = {} start ", accountNum);
+
+        //Todo validate Account number for not null and a number
+
+        if(null!=accountNum && accountNum.length()>0){
+         routingContext.response()
                 .putHeader("content-type", "application/json; charset=utf-8")
                 .setStatusCode(200)
-                .end(Json.encodePrettily(transactionsMap.values()));
+                .end(Json.encodePrettily(transactionRepository.getTransactionsByAccount(Long.valueOf(accountNum))));
+        }
     }
 
     private void handleGetAccounts(RoutingContext routingContext) {
@@ -83,7 +113,7 @@ public class MoneyTransferVerticle extends AbstractVerticle {
         routingContext.response()
                 .putHeader("content-type", "application/json; charset=utf-8")
                 .setStatusCode(200)
-                .end(Json.encodePrettily(accountsMap.values()));
+                .end(Json.encodePrettily(accountsRepository));
     }
 
 
@@ -96,36 +126,40 @@ public class MoneyTransferVerticle extends AbstractVerticle {
 
             log.debug("transactionRequestDTO=", transactionRequestDTO);
 
-            if (!AccountValidator.isAccountValid(transactionRequestDTO.getSourceAccount(), accountsMap)) {
+            if (!AccountValidator.isAccountValid(transactionRequestDTO.getSourceAccount(), accountsRepository)) {
                 throw new InvalidAccountException("Invalid account details"); //TODO add test case for the same
             }
 
             //TODO validation check for null
             //TODO validation check on debit source account if amount be to be debited > balance amount of debit account
-            if (!AccountValidator.doesAccountHaveEnoughFunds(transactionRequestDTO.getSourceAccount(), transactionRequestDTO.getTransferAmount(), accountsMap)) {
+            if (!AccountValidator.doesAccountHaveEnoughFunds(transactionRequestDTO.getSourceAccount(), transactionRequestDTO.getTransferAmount(), accountsRepository)) {
                 throw new InsufficientFundsException("Not enough funds to transfer");
             }
 
             MoneyTransaction moneyTransaction;
 
             //Manual locking can be used instead of synchronized block but this is used for simplicity
-            //Optimistic locking is not prefered in this case but it might be a performance issue
+            //Optimistic locking is not preferred in this case but it might be a performance issue
             synchronized (transactionRequestDTO) {
 
-                debitSourceAccount(transactionRequestDTO, accountsMap);
-                creditDestinationAccount(transactionRequestDTO, accountsMap);
+                debitSourceAccount(transactionRequestDTO);
+                creditDestinationAccount(transactionRequestDTO);
 
                 //TODO refresh account balances in store
             /*    accountsMap.put(transactionRequestDTO.getSourceAccount().getAccountNumber(), transactionRequestDTO.getSourceAccount());
                 accountsMap.put(transactionRequestDTO.getDestinationAccount().getAccountNumber(), transactionRequestDTO.getDestinationAccount());*/
 
-                moneyTransaction = new MoneyTransaction(transactionRequestDTO.getSourceAccount().getAccountNumber(),
+              moneyTransaction =  this.transactionRepository.createTransaction(transactionRequestDTO.getSourceAccount(),
+                        transactionRequestDTO.getDestinationAccount(), transactionRequestDTO.getTransferAmount());
+            /*
+                    moneyTransaction = new MoneyTransaction(transactionRequestDTO.getSourceAccount().getAccountNumber(),
                         transactionRequestDTO.getDestinationAccount().getAccountNumber(), transactionRequestDTO.getTransferAmount());
 
                 log.debug("values after funds transfer =", transactionRequestDTO);
+
+                transactionsMap.put(moneyTransaction.getTransactionId(), moneyTransaction);*/
                 log.debug("moneyTransaction values after funds transfer =", moneyTransaction.getTransactionId());
 
-                transactionsMap.put(moneyTransaction.getTransactionId(), moneyTransaction);
             }
 
             //return moneytransaction object in case of 201 (successful creation)
@@ -140,15 +174,14 @@ public class MoneyTransferVerticle extends AbstractVerticle {
                     .putHeader("content-type", "application/json; charset=utf-8")
                     .setStatusCode(400)
                     .end(Json.encodePrettily(errorMessage));
-        }catch (InvalidAccountException ex) {
+        } catch (InvalidAccountException ex) {
             ErrorMessageResponse errorMessage = new ErrorMessageResponse(400, ex.getMessage(), LocalDateTime.now());
             log.error("Invalid account details, the account details are not there in map");
             routingContext.response()
                     .putHeader("content-type", "application/json; charset=utf-8")
                     .setStatusCode(400)
                     .end(Json.encodePrettily(errorMessage));
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             //Any other error apart from business exceptions would be a system error rather than an user error
             ErrorMessageResponse errorMessage = new ErrorMessageResponse(500, e.getMessage(), LocalDateTime.now());
             log.error("Generic server exception");
@@ -159,40 +192,47 @@ public class MoneyTransferVerticle extends AbstractVerticle {
         }
     }
 
-    private void debitSourceAccount(TransactionRequestDTO transactionRequestDTO, Map<Long, Account> accountsMap) {
+    private void debitSourceAccount(TransactionRequestDTO transactionRequestDTO) {
 
-        Account debitAccount = accountsMap.get(transactionRequestDTO.getSourceAccount().getAccountNumber());
+        Optional<Account> debitAccountOptional = this.accountsRepository.findById(transactionRequestDTO.getSourceAccount().getAccountNumber());
 
-        log.info("debitAccount retrieved from Map = {}", debitAccount);
+        if(debitAccountOptional.isPresent()) {
 
-        BigDecimal newBalance = debitAccount.getBalance().subtract(transactionRequestDTO.getTransferAmount());
+            Account debitAccount = debitAccountOptional.get();
 
-        //update account balance
-        transactionRequestDTO.getSourceAccount().setBalance(newBalance);
+            log.info("debitAccount retrieved from Map = {}", debitAccount);
 
-        accountsMap.put(transactionRequestDTO.getSourceAccount().getAccountNumber(), transactionRequestDTO.getSourceAccount());
+            BigDecimal newBalance = debitAccount.getBalance().subtract(transactionRequestDTO.getTransferAmount());
 
-        log.info("debit source account step completed, refreshed account details ={}", transactionRequestDTO.getSourceAccount());
+            //update account balance
+            debitAccount.setBalance(newBalance);
+
+            this.accountsRepository.save(debitAccount);
+
+            log.info("debit source account step completed, refreshed account details ={}", transactionRequestDTO.getSourceAccount());
+        }
+    }
+
+    private void creditDestinationAccount(TransactionRequestDTO transactionRequestDTO) {
+
+        Optional<Account> creditAccountOptional = this.accountsRepository.findById(transactionRequestDTO.getDestinationAccount().getAccountNumber());
+
+        if(creditAccountOptional.isPresent()) {
+
+            Account creditAccount = creditAccountOptional.get();
+
+            log.info("creditAccount retrieved from Map = {}", creditAccount);
+
+            BigDecimal newBalance = creditAccount.getBalance().add(transactionRequestDTO.getTransferAmount());
+            //update account balance
+            creditAccount.setBalance(newBalance);
+
+            this.accountsRepository.save(creditAccount);
+
+            log.info("credit destination account step completed, refreshed account details ={}", transactionRequestDTO.getDestinationAccount());
+        }
 
     }
 
-    private void creditDestinationAccount(TransactionRequestDTO transactionRequestDTO, Map<Long, Account> accountsMap) {
-
-        Account creditAccount = accountsMap.get(transactionRequestDTO.getDestinationAccount().getAccountNumber());
-
-        log.info("creditAccount retrieved from Map = {}", creditAccount);
-
-        BigDecimal newBalance = creditAccount.getBalance().add(transactionRequestDTO.getTransferAmount());
-        //update account balance
-        transactionRequestDTO.getDestinationAccount().setBalance(newBalance);
-        accountsMap.put(transactionRequestDTO.getDestinationAccount().getAccountNumber(), transactionRequestDTO.getDestinationAccount());
-        log.info("credit destination account step completed, refreshed account details ={}", transactionRequestDTO.getDestinationAccount());
-
-    }
-
-    private void sendError(int statusCode, HttpServerResponse response) {
-        //TODO wrap this request?
-        response.setStatusCode(statusCode).end();
-    }
 
 }

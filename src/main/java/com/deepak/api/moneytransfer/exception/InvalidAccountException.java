@@ -1,4 +1,4 @@
-package com.deepak.api.moneytransfer.model;
+package com.deepak.api.moneytransfer.exception;
 
 public class InvalidAccountException extends Throwable {
     private String errorMessage;

@@ -16,6 +16,10 @@ public class Account {
     private Long sortCode;
     private BigDecimal balance;
 
+    //A customer could have multiple accounts
+    //Also customer cannot exist without an account
+    private Customer customer;
+
     public Account(Long accountNumber, Long sortCode) {
         this.accountNumber = accountNumber;
         this.sortCode = sortCode;

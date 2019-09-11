@@ -1,4 +1,4 @@
-package com.deepak.api.moneytransfer.model;
+package com.deepak.api.moneytransfer.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

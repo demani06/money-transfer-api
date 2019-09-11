@@ -50,6 +50,6 @@ Design and implement a RESTful API (including data model and the backing impleme
  
  
  ## Caveats
- + The API is configured to run on the port 6090 and this can be changed and hence the api endpoints would be like http://localhst:6090/
+ + The API is configured to run on the port 6090 and this can be changed and hence the api endpoints would be like http://localhost:6090/
  + No security configured because that is not part of the requirement
  

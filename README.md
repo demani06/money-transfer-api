@@ -28,17 +28,25 @@ Design and implement a RESTful API (including data model and the backing impleme
   {
        {
         "accountNumber": 90909090,
-        "sortCode": 808080,
-        "balance": 1000
+        "sortCode": 808080
        },
 	{
         "accountNumber": 19191919,
-        "sortCode": 808080,
-        "balance": 2000
+        "sortCode": 808080
        },
 	    transferAmount: 900
   }
 ```
+### Get accounts endpoint 
+   + Endpoint : http://localhost:6090/api/accounts
+   + Request Type : GET
+ 
+### Get accounts endpoint 
+   + Endpoint : http://localhost:6090/api/accounts/{account_id}/transactions/
+   + Request Type : GET
+ 
+
+
  
  
  ## Caveats

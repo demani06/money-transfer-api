@@ -161,5 +161,23 @@ public class MoneyTransferServiceIntegrationTest {
                 })
                 .end();
     }
+
+    @Test
+    public void given_when_call_get_Transactions_then_Return_204_for_accountNumber_If_No_transactions(TestContext testContext) {
+        final Async async = testContext.async();
+
+        vertx.createHttpClient()
+                .get(AppConstants.SERVER_PORT, "localhost", "/api/accounts/22222999/transactions/")
+                .putHeader("content-type", "application/json")
+                .handler(response -> {
+                    testContext.assertEquals(response.statusCode(), 204);
+                    testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
+                    response.bodyHandler(body -> {
+                        //testContext.assertTrue(body.toString().contains("Invalid Account number"));
+                        async.complete();
+                    });
+                })
+                .end();
+    }
 }
 

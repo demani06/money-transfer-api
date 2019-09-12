@@ -11,9 +11,13 @@ public interface MoneyTransferService {
 
     void handleGetAccounts(RoutingContext routingContext);
 
+    void handleGetAccountsByCustomerId(RoutingContext routingContext);
+
     void handleTransferMoney(RoutingContext routingContext);
 
     void debitSourceAccount(TransactionRequestDTO transactionRequestDTO);
 
     void creditDestinationAccount(TransactionRequestDTO transactionRequestDTO);
+
+    void handleCreateAccount(RoutingContext routingContext);
 }

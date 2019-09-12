@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * This class is in memory version of Account Repo, use map for making the DAO services simple
@@ -20,7 +21,7 @@ public class AccountRepositoryInMemoryImpl implements AccountsRepository<Account
     @Override
     public Optional<Account> findById(Long accountNumberTobeRetrieved) {
         log.info("accountsMap size = {} and account number to be searched :{}", accountsMap.size(), accountNumberTobeRetrieved);
-        return accountsMap.values().stream().filter(account -> account.getAccountNumber().compareTo(accountNumberTobeRetrieved)==0).findFirst();
+        return accountsMap.values().stream().filter(account -> account.getAccountNumber().compareTo(accountNumberTobeRetrieved) == 0).findFirst();
     }
 
     @Override
@@ -40,4 +41,10 @@ public class AccountRepositoryInMemoryImpl implements AccountsRepository<Account
     }
 
 
+    @Override
+    public Collection<Account> findAllByCustomerId(String customerId) {
+        log.info("accountsMap size = {} and customerId to be searched :{}", accountsMap.size(), customerId);
+        //The assumption is that by this time it comes here the basic validation is done
+        return accountsMap.values().stream().filter(account -> account.getCustomer().getCustomerId().equalsIgnoreCase(customerId)).collect(Collectors.toSet());
+    }
 }

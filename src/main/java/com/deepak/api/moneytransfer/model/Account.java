@@ -23,5 +23,6 @@ public class Account {
     public Account(Long accountNumber, Long sortCode) {
         this.accountNumber = accountNumber;
         this.sortCode = sortCode;
+        this.balance = new BigDecimal(0); //min value is 0
     }
 }

@@ -15,17 +15,17 @@ import java.util.Optional;
 @Slf4j
 public class AccountValidator {
 
-    public static boolean validateAccountNumber(String accountNumberString){
+    public static boolean isValidAccountNumber(String accountNumberString){
 
         log.info("Validating if the account number - '{}' is valid ", accountNumberString);
 
         boolean isAccountNumberInputValid = false;
 
-        if(StringUtils.isNotBlank(accountNumberString) && StringUtils.isNotEmpty(accountNumberString) && StringUtils.isNumeric(accountNumberString)){
+        if(StringUtils.isNotBlank(accountNumberString) && StringUtils.isNumeric(accountNumberString) && accountNumberString.trim().length() == 8 ){
             isAccountNumberInputValid = true;
         }
 
-        log.info("isAccountNumberInputValid = {}", isAccountNumberInputValid);
+        log.info("isValidAccountNumber = {}", isAccountNumberInputValid);
 
         return isAccountNumberInputValid;
     }
@@ -54,7 +54,7 @@ public class AccountValidator {
     }
 
 
-    public static boolean isAccountValid(Account sourceAccount, AccountsRepository accountsRepository) {
+    public static boolean ifAccountExistsInDB(Account sourceAccount, AccountsRepository accountsRepository) {
         boolean isAccountValid = false;
 
         log.info("Checking if account number provided exists");
@@ -72,5 +72,15 @@ public class AccountValidator {
 
     private static Optional getAccountByAccountNumber(Account sourceAccount, AccountsRepository accountsRepository) {
         return accountsRepository.findById(sourceAccount.getAccountNumber());
+    }
+
+    public static boolean isCustomerIdValid(String customerId) {
+        boolean isCustomerIdValid = false;
+
+        if(StringUtils.isNotEmpty(customerId) && StringUtils.isNotBlank(customerId) && StringUtils.isAlphanumeric(customerId)){
+            isCustomerIdValid = true;
+        }
+
+        return isCustomerIdValid;
     }
 }

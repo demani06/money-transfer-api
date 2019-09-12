@@ -122,6 +122,72 @@ public class MoneyTransferServiceIntegrationTest {
                 .end();
     }
 
+
+    @Test
+    public void given_when_Money_Transfer_then_Failure_If_invalid_Source_account_no(TestContext testContext) {
+        final Async async = testContext.async();
+
+        Account account1 = new Account(89L, 060606L, new BigDecimal(1500), null);
+        Account account2 = new Account(22222999L, 060606L, new BigDecimal(500), null);
+
+        //Request json
+        final String json = Json.encodePrettily(new TransactionRequestDTO(account1, account2, new BigDecimal(2200)));
+
+        final String length = Integer.toString(json.length());
+
+        vertx.createHttpClient()
+                .post(AppConstants.SERVER_PORT, "localhost", "/api/transactions")
+                .putHeader("content-type", "application/json")
+                .putHeader("content-length", length)
+                .handler(response -> {
+                    log.info("resp in test case = {}", response);
+                    log.info("Status code in test case = {}", response.statusCode());
+                    testContext.assertEquals(response.statusCode(), 400);
+                    testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
+                    response.bodyHandler(body -> {
+                        System.out.println("body=" + body.toJson().toString());
+                        testContext.assertTrue(body.toJson().toString().contains("\"statusCode\":400,\"exceptionMessage\":\"Invalid account details, source account number is null or has invalid length\""));
+                        async.complete();
+                    });
+                })
+                .write(json)
+                .end();
+    }
+
+
+    @Test
+    public void given_when_Money_Transfer_then_Failure_If_invalid_destination_account_no(TestContext testContext) {
+        final Async async = testContext.async();
+
+        Account account1 = new Account(12222999L, 060606L, new BigDecimal(1500), null);
+        Account account2 = new Account(11L, 060606L, new BigDecimal(500), null);
+
+        //Request json
+        final String json = Json.encodePrettily(new TransactionRequestDTO(account1, account2, new BigDecimal(2200)));
+
+        final String length = Integer.toString(json.length());
+
+        vertx.createHttpClient()
+                .post(AppConstants.SERVER_PORT, "localhost", "/api/transactions")
+                .putHeader("content-type", "application/json")
+                .putHeader("content-length", length)
+                .handler(response -> {
+                    log.info("resp in test case = {}", response);
+                    log.info("Status code in test case = {}", response.statusCode());
+                    testContext.assertEquals(response.statusCode(), 400);
+                    testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
+                    response.bodyHandler(body -> {
+                        System.out.println("body=" + body.toJson().toString());
+                        testContext.assertTrue(body.toJson().toString().contains("\"statusCode\":400,\"exceptionMessage\":\"Invalid account details, destination account number is null or has invalid length\","));
+                        async.complete();
+                    });
+                })
+                .write(json)
+                .end();
+    }
+
+
+
     @Test
     public void given_when_call_get_Transactions_thenSuccess(TestContext testContext) {
         final Async async = testContext.async();
@@ -197,6 +263,25 @@ public class MoneyTransferServiceIntegrationTest {
                         System.out.println("body jsonobject = " + body.toJson());
 
                         testContext.assertTrue(body.toJson().toString().contains("{\"accountNumber\":\"90909090\",\"sortCode\":\"606060\",\"balance\":\"500\"},{\"accountNumber\":\"22222999\",\"sortCode\":\"606060\",\"balance\":\"900\"},{\"accountNumber\":\"12222999\",\"sortCode\":\"606060\",\"balance\":\"800\"}"));
+                        async.complete();
+                    });
+                })
+                .end();
+    }
+
+    @Test
+    public void given_when_call_get_Accounts_forCustomer_then_return_400(TestContext testContext) {
+        final Async async = testContext.async();
+
+        vertx.createHttpClient()
+                .get(AppConstants.SERVER_PORT, "localhost", "/api/customer/@@@abcdef/accounts")
+                .putHeader("content-type", "application/json")
+                .handler(response -> {
+                    testContext.assertEquals(response.statusCode(), 400);
+                    testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
+                    response.bodyHandler(body -> {
+                        System.out.println("body = " + body);
+                        testContext.assertTrue(body.toString().contains("Invalid Customer Id"));
                         async.complete();
                     });
                 })

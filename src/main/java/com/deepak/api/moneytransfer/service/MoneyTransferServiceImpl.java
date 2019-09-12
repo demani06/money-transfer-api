@@ -26,7 +26,7 @@ import java.util.*;
 @Slf4j
 public class MoneyTransferServiceImpl implements MoneyTransferService {
 
-    //Todo these creation of the repos can be moved to a separate class
+    //these creation of the repos can be moved to a separate class
     private final AccountsRepository<Account, Long> accountsRepository = new AccountRepositoryInMemoryImpl();
     private final TransactionRepository<MoneyTransaction, UUID> transactionsRepository = new TransactionRepositoryInMemoryImpl();
     private final CustomerRepository<Customer, String> customersRepository = new CustomerRepositoryInMemoryImpl();
@@ -37,7 +37,7 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
         //Basic test data for API, in  an ideal world this would create a DB table and insert the master data
 
         Customer customer1 = new Customer("abcdef", "Cunnan", "James", "cunnan.james@companya.com", LocalDate.of(1966, 11, 11));
-        Customer customer2 = new Customer(UUID.randomUUID().toString().substring(5), "Sam", "Fox", "sam.fox@companyb.com" , LocalDate.of(1980, 1, 1));
+        Customer customer2 = new Customer(UUID.randomUUID().toString().substring(5), "Sam", "Fox", "sam.fox@companyb.com", LocalDate.of(1980, 1, 1));
 
         customersRepository.save(customer1);
         customersRepository.save(customer2);
@@ -64,18 +64,16 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
 
         log.info("Get transactions for account number = '{}' start ", accountNum);
 
-        if (!AccountValidator.validateAccountNumber(accountNum)) { //means that it is either null or empty string or not a number
+        if (!AccountValidator.isValidAccountNumber(accountNum)) { //means that it is either null or empty string or not a number
             routeResponse(routingContext, 400, "Invalid Account number");
         } else {
             Set<MoneyTransaction> transactionsByAccount = transactionsRepository.getTransactionsByAccount(Long.valueOf(accountNum));
 
-            if(transactionsByAccount.isEmpty()){
+            if (transactionsByAccount.isEmpty()) {
                 routeResponse(routingContext, 204, "No Transactions"); //for empty collection return 204
-            }
-            else{
+            } else {
                 routeResponse(routingContext, 200, transactionsByAccount);
             }
-
         }
     }
 
@@ -91,27 +89,28 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
         String customerId = routingContext.request().getParam("id");
         log.info("Get accounts for customer id - {}", customerId);
 
-        //Todo Validate customerId
-        //Todo if customer id is invalid, return 400
+        if (!AccountValidator.isCustomerIdValid(customerId)) {
+            routeResponse(routingContext, 400, "Invalid Customer Id");
+        }
 
         Collection<Account> accountCollection = accountsRepository.findAllByCustomerId(customerId);
         Set<AccountResponseDTO> accountResponseDTOS = null;
-        if(accountCollection.size()>0){
-           accountResponseDTOS = transformAccountResponsesToAccountDTO(accountCollection);
+        if (accountCollection.size() > 0) {
+            accountResponseDTOS = transformAccountResponsesToAccountDTOs(accountCollection);
         }
 
         routeResponse(routingContext, 200, accountResponseDTOS);
     }
 
     /*
-    * Since an account consists of customer, but for accounts by customer id customer info is not needed hence converting to
-    * */
-    private Set<AccountResponseDTO> transformAccountResponsesToAccountDTO(Collection<Account> accountCollection) {
+     * Since an account consists of customer, but for accounts by customer id customer info is not needed hence converting to
+     * */
+    private Set<AccountResponseDTO> transformAccountResponsesToAccountDTOs(Collection<Account> accountCollection) {
 
         Set<AccountResponseDTO> accountResponseDTOSet = new HashSet();
 
         for (Account account : accountCollection) {
-            AccountResponseDTO accountResponseDTO = new AccountResponseDTO(account.getAccountNumber().toString(),account.getSortCode().toString(), account.getBalance().toString());
+            AccountResponseDTO accountResponseDTO = new AccountResponseDTO(account.getAccountNumber().toString(), account.getSortCode().toString(), account.getBalance().toString());
             accountResponseDTOSet.add(accountResponseDTO);
         }
 
@@ -132,11 +131,12 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
         log.info("accountRequestDTO = {} ", accountRequestDTO); //this line can be changed to log.debug
         //Todo validate the request
 
-        //At this point of time we don't have a customer id, so we have to verify if a customer exists with the same email id. If yes will make use of same mail id. In prod we might have more paramters search
+        //At this point of time we don't have a customer id, so we have to verify if a customer exists with the same email id.
+        // If yes will make use of same mail id. In prod/real time we might have a different search
         Optional<Customer> customerOptional = customersRepository.findByEmailAddress(accountRequestDTO.getCustomer().getEmailAddress());
 
         //TODO check if customer exists, else create customer
-        if(!customerOptional.isPresent()){
+        if (!customerOptional.isPresent()) {
             //create customer, save it
             log.info("This customer does not exist in DB");
             //Request mapping to Customer Object
@@ -150,14 +150,12 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
             log.info("Saving the customer {} ", customer);
 
             customersRepository.save(customer);
-        }else{
+        } else {
             customer = customerOptional.get();
         }
 
         //Request mapping to Account Model object
-        Account account = new Account(accountRequestDTO.getAccountNumber(), accountRequestDTO.getSortCode());
-        account.setCustomer(customer);
-
+        Account account = new Account(accountRequestDTO.getSortCode(), customer);
 
         log.info("Account that is getting saved : {}", account);
 
@@ -175,10 +173,20 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
         try {
             final TransactionRequestDTO transactionRequestDTO = Json.decodeValue(routingContext.getBodyAsString(), TransactionRequestDTO.class);
 
-            log.debug("transactionRequestDTO=", transactionRequestDTO);
+            log.info("transactionRequestDTO= {}", transactionRequestDTO);
 
-            if (!AccountValidator.isAccountValid(transactionRequestDTO.getSourceAccount(), accountsRepository)) {
-                throw new InvalidAccountException("Invalid account details"); //TODO add test case for the same
+            if(!AccountValidator.isValidAccountNumber(transactionRequestDTO.getSourceAccount().getAccountNumber().toString())){
+                log.error("Invalid account details, source account number is null or has invalid length");
+                throw new InvalidAccountException("Invalid account details, source account number is null or has invalid length");
+            }
+
+            if(!AccountValidator.isValidAccountNumber(transactionRequestDTO.getDestinationAccount().getAccountNumber().toString())){
+                log.error("Invalid account details, destination account number is a null or has invalid length");
+                throw new InvalidAccountException("Invalid account details, destination account number is null or has invalid length");
+            }
+
+            if (!AccountValidator.ifAccountExistsInDB(transactionRequestDTO.getSourceAccount(), accountsRepository)) {
+                throw new InvalidAccountException("Invalid account details, source account number does not exist in DB");
             }
 
             if (!AccountValidator.doesAccountHaveEnoughFunds(transactionRequestDTO.getSourceAccount(), transactionRequestDTO.getTransferAmount(), accountsRepository)) {
@@ -214,7 +222,7 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
         } catch (InvalidAccountException ex) {
 
             ErrorMessageResponse errorMessage = new ErrorMessageResponse(400, ex.getMessage(), LocalDateTime.now());
-            log.error("Invalid account details, the account details are not there in map");
+            log.error("Invalid account details, the account details are not present in DB");
             routeResponse(routingContext, 400, errorMessage);
 
         } catch (Exception e) {
@@ -269,11 +277,11 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
         }
     }
 
-    private void routeResponse(RoutingContext routingContext, int statusCode, Object o) {
+    private void routeResponse(RoutingContext routingContext, int statusCode, Object returnObj) {
         routingContext.response()
                 .putHeader("content-type", "application/json; charset=utf-8")
                 .setStatusCode(statusCode)
-                .end(Json.encodePrettily(o));
+                .end(Json.encodePrettily(returnObj));
     }
 
 

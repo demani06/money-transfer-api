@@ -4,6 +4,7 @@ package com.deepak.api.moneytransfer;
 import com.deepak.api.moneytransfer.service.MoneyTransferService;
 import com.deepak.api.moneytransfer.service.MoneyTransferServiceImpl;
 import com.deepak.api.moneytransfer.utils.AppConstants;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.json.Json;
@@ -44,7 +45,7 @@ public class MoneyTransferVerticle extends AbstractVerticle {
         router.get(API_FOR_GET_ACCOUNT_TRANSACTIONS).handler(moneyTransferService::handleTransactionsByAccountId);
 
         //Endpoint to view the accounts for a customer
-        router.get(API_FOR_ACCOUNTS_FOR_A_CUSTOMER).handler(moneyTransferService::handleGetAccountsByCustomerId);//Todo the responses need not have the customer info because the search is for a customer
+        router.get(API_FOR_ACCOUNTS_FOR_A_CUSTOMER).handler(moneyTransferService::handleGetAccountsByCustomerId);
 
         //Endpoint to view all the accounts (possibly for an admin or a report)
         router.get(API_FOR_ACCOUNTS).handler(moneyTransferService::handleGetAccounts);

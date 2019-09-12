@@ -53,8 +53,9 @@ public class MoneyTransferServiceIntegrationTest {
                     testContext.assertEquals(response.statusCode(), 201);
                     testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
                     response.bodyHandler(body -> {
-                        System.out.println("body=" + body);
-                        //TODO call the get accounts to see the refreshed balance and assert the balances of both accounts
+                        System.out.println("body=" + body.toJson().toString());
+                        testContext.assertTrue(body.toJson().toString().contains("\"sourceAccountNumber\":12222999,\"destinationAccountNumber\":22222999,\"transactionAmount\":200}"));
+                        testContext.assertTrue(body.toJson().toString().contains("{\"transactionId\":\""));
                         async.complete();
                     });
                 })
@@ -137,7 +138,8 @@ public class MoneyTransferServiceIntegrationTest {
                     testContext.assertEquals(response.statusCode(), 200);
                     testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
                     response.bodyHandler(body -> {
-                        System.out.println("body=" + body);
+                        System.out.println("body=" + body.toJson().toString());
+                        testContext.assertTrue(body.toJson().toString().contains("\"sourceAccountNumber\":90909090,\"destinationAccountNumber\":99999999,\"transactionAmount\":100"));
                         async.complete();
                     });
                 })
@@ -174,6 +176,27 @@ public class MoneyTransferServiceIntegrationTest {
                     testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
                     response.bodyHandler(body -> {
                         //testContext.assertTrue(body.toString().contains("Invalid Account number"));
+                        async.complete();
+                    });
+                })
+                .end();
+    }
+
+    @Test
+    public void given_when_call_get_Accounts_forCustomer_then_return_success(TestContext testContext) {
+        final Async async = testContext.async();
+
+        vertx.createHttpClient()
+                .get(AppConstants.SERVER_PORT, "localhost", "/api/customer/abcdef/accounts")
+                .putHeader("content-type", "application/json")
+                .handler(response -> {
+                    testContext.assertEquals(response.statusCode(), 200);
+                    testContext.assertTrue(response.headers().get("content-type").contains("application/json"));
+                    response.bodyHandler(body -> {
+                        System.out.println("body = " + body);
+                        System.out.println("body jsonobject = " + body.toJson());
+
+                        testContext.assertTrue(body.toJson().toString().contains("{\"accountNumber\":\"90909090\",\"sortCode\":\"606060\",\"balance\":\"500\"},{\"accountNumber\":\"22222999\",\"sortCode\":\"606060\",\"balance\":\"900\"},{\"accountNumber\":\"12222999\",\"sortCode\":\"606060\",\"balance\":\"800\"}"));
                         async.complete();
                     });
                 })

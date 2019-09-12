@@ -8,6 +8,7 @@ import com.deepak.api.moneytransfer.model.MoneyTransaction;
 import com.deepak.api.moneytransfer.repository.*;
 import com.deepak.api.moneytransfer.request.AccountRequestDTO;
 import com.deepak.api.moneytransfer.request.TransactionRequestDTO;
+import com.deepak.api.moneytransfer.response.AccountResponseDTO;
 import com.deepak.api.moneytransfer.response.ErrorMessageResponse;
 import com.deepak.api.moneytransfer.utils.AccountValidator;
 import io.vertx.core.json.Json;
@@ -17,9 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /*
  * Extra service class which abstracts the service method and calls to the DAO layer
@@ -37,7 +36,7 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
 
         //Basic test data for API, in  an ideal world this would create a DB table and insert the master data
 
-        Customer customer1 = new Customer(UUID.randomUUID().toString().substring(5), "Cunnan", "James", "cunnan.james@companya.com", LocalDate.of(1966, 11, 11));
+        Customer customer1 = new Customer("abcdef", "Cunnan", "James", "cunnan.james@companya.com", LocalDate.of(1966, 11, 11));
         Customer customer2 = new Customer(UUID.randomUUID().toString().substring(5), "Sam", "Fox", "sam.fox@companyb.com" , LocalDate.of(1980, 1, 1));
 
         customersRepository.save(customer1);
@@ -63,7 +62,7 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
         String accountNum = routingContext.request()
                 .getParam("id");
 
-        log.info("Get transactions for account number = {} start ", accountNum);
+        log.info("Get transactions for account number = '{}' start ", accountNum);
 
         if (!AccountValidator.validateAccountNumber(accountNum)) { //means that it is either null or empty string or not a number
             routeResponse(routingContext, 400, "Invalid Account number");
@@ -95,9 +94,29 @@ public class MoneyTransferServiceImpl implements MoneyTransferService {
         //Todo Validate customerId
         //Todo if customer id is invalid, return 400
 
-        routeResponse(routingContext, 200, accountsRepository.findAllByCustomerId(customerId));
+        Collection<Account> accountCollection = accountsRepository.findAllByCustomerId(customerId);
+        Set<AccountResponseDTO> accountResponseDTOS = null;
+        if(accountCollection.size()>0){
+           accountResponseDTOS = transformAccountResponsesToAccountDTO(accountCollection);
+        }
+
+        routeResponse(routingContext, 200, accountResponseDTOS);
     }
 
+    /*
+    * Since an account consists of customer, but for accounts by customer id customer info is not needed hence converting to
+    * */
+    private Set<AccountResponseDTO> transformAccountResponsesToAccountDTO(Collection<Account> accountCollection) {
+
+        Set<AccountResponseDTO> accountResponseDTOSet = new HashSet();
+
+        for (Account account : accountCollection) {
+            AccountResponseDTO accountResponseDTO = new AccountResponseDTO(account.getAccountNumber().toString(),account.getSortCode().toString(), account.getBalance().toString());
+            accountResponseDTOSet.add(accountResponseDTO);
+        }
+
+        return accountResponseDTOSet;
+    }
 
 
     /*

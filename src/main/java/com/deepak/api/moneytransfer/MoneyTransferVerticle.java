@@ -50,7 +50,6 @@ public class MoneyTransferVerticle extends AbstractVerticle {
         router.get(API_FOR_ACCOUNTS).handler(moneyTransferService::handleGetAccounts);
 
 
-
         //Start the server on port 6090
         vertx.createHttpServer()
                 .requestHandler(router)

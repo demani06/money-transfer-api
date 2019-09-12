@@ -37,19 +37,37 @@ Design and implement a RESTful API (including data model and the backing impleme
 	    transferAmount: 900
   }
 ```
-### Get accounts endpoint 
+### Get accounts endpoint (For admin/reports purposes)
    + Endpoint : http://localhost:6090/api/accounts
    + Request Type : GET
  
-### Get accounts endpoint 
+### Get transactions for an account
    + Endpoint : http://localhost:6090/api/accounts/{account_id}/transactions/
    + Request Type : GET
  
+### Get accounts for a customer
+  + Endpoint : http://localhost:6090/api/customer/{customer_id}/accounts
+  + Request Type : GET
 
-
+### Create account
+  + Endpoint : http://localhost:6090/api/accounts
+  + Request Type : POST
+     + sample request : 
+```javascript
+ {
+ "sortCode": 606060,
+ "customer":{
+	"firstName":"Sam",
+	"lastName":"Fox",
+	"emailAddress":"sam.fox@companyb.com",
+	"dateOfBirth":"01-01-1980"
+ }
+}
  
  
  ## Caveats
  + The API is configured to run on the port 6090 and this can be changed and hence the api endpoints would be like http://localhost:6090/
  + No security configured because that is not part of the requirement
+
+ 
  

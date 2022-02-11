@@ -12,7 +12,7 @@
         <main.verticle>io.vertx.starter.MainVerticle</main.verticle>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>${maven.compiler.source}</maven.compiler.target>
-        <vertx.version>3.8.1</vertx.version>
+        <vertx.version>3.9.4</vertx.version>
         <testng.version>6.10</testng.version>
         <maven-shade-plugin.version>2.3</maven-shade-plugin.version>
     </properties>
